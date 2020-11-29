@@ -1,0 +1,20 @@
+HOW TO RUN AND USE IT!!!
+
+To compile this program, all you have to do is to navigate to the "classes" directory using your terminal, then write Make and press enter. (Ignore all the warnings though).
+
+In order to run it just write ./render in your terminal. Enjoy.
+
+Navigation:
+
+a) To change the shader just press a number between 1 - 4.
+b) To adjust the camera direction use the mouse
+c) To move the camera forward use the Up key.
+d) To move backwards use the Down Key
+e) To move Up use W
+f) To move Down use S
+g) To move to the left use D
+h) To move to the right use A
+
+To exit just press ESC
+
+Hope you like it!!!

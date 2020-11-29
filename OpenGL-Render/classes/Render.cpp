@@ -1,42 +1,39 @@
 #include "Render.h"
 
-// Include standard headers
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
 #include <iostream>
 
-// Include GLEW
 #include <GL/glew.h>
 
-// Include GLFW
 #include <GLFW/glfw3.h>
 GLFWwindow* window;
 
-// Include GLM
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
-using namespace glm;
 using namespace std;
 
 #include "shader.hpp"
 #include "texture.hpp"
 #include "objloader.hpp"
 #include "vboindexer.hpp"
+#include "tangentspace.hpp"
 
+
+//Initialize all stuff needed to render our model
 void Render::createWindow(int width, int heigth, char* windowName)
 {
-    // Initialise GLFW
 	if( !glfwInit() )
 	{
 		fprintf( stderr, "Failed to initialize GLFW\n" );
 		getchar();
 	}
 
-	glfwWindowHint(GLFW_SAMPLES, 4);
+	glfwWindowHint(GLFW_SAMPLES, 1);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); 
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     window = glfwCreateWindow( width, heigth, windowName, NULL, NULL);
@@ -47,47 +44,40 @@ void Render::createWindow(int width, int heigth, char* windowName)
 	}
 	glfwMakeContextCurrent(window);
 
-	// Initialize GLEW
-	glewExperimental = true; // Needed for core profile
-	if (glewInit() != GLEW_OK) {
+	glewExperimental = true;
+	if (glewInit() != GLEW_OK) 
+	{
 		fprintf(stderr, "Failed to initialize GLEW\n");
 		getchar();
 		glfwTerminate();
 	}
 
-	// Ensure we can capture the escape key being pressed below
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
-
-    // Hide the mouse and enable unlimited mouvement
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
   	glfwPollEvents();
     glfwSetCursorPos(window, width/2, heigth/2);
-
-    glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-
-	// Enable depth test
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glEnable(GL_DEPTH_TEST);
-	// Accept fragment if it closer to the camera than the former one
 	glDepthFunc(GL_LESS); 
-
-	// Cull triangles which normal is not towards the camera
 	glEnable(GL_CULL_FACE);
 
 	glGenVertexArrays(1, &VertexArrayID);
 	glBindVertexArray(VertexArrayID);
 }
 
+//Cleans the buffer current color to paint anything
 void Render::clearColor(float r, float g, float b)
 {
 	glClearColor(r, g, b, 1.0f);
 }
 
+//Clenas up the whole screen with the current color
 void Render::clear()
 {
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 }
 
+//Shows up what's in the buffer
 void Render::render()
 {
     glfwSwapBuffers(window);
@@ -99,8 +89,6 @@ void Render::drawTriangle()
 	GLuint VertexArrayID;
 	glGenVertexArrays(1, &VertexArrayID);
 	glBindVertexArray(VertexArrayID);
-
-	// Create and compile our GLSL program from the shaders
 	GLuint programID = LoadShaders( "SimpleVertexShader.vertexshader", "SimpleFragmentShader.fragmentshader" );
 
 
@@ -118,36 +106,52 @@ void Render::drawTriangle()
 	glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
 		glVertexAttribPointer(
-			0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-			3,                  // size
-			GL_FLOAT,           // type
-			GL_FALSE,           // normalized?
-			0,                  // stride
-			(void*)0            // array buffer offset
+			0,                 
+			3,              
+			GL_FLOAT,          
+			GL_FALSE,        
+			0,                
+			(void*)0           
 		);
 
-		// Draw the triangle !
-		glDrawArrays(GL_TRIANGLES, 0, 3); // 3 indices starting at 0 -> 1 triangle
+		glDrawArrays(GL_TRIANGLES, 0, 3); 
 
 		glDisableVertexAttribArray(0);
 }
 
-void Render::loadShader()
+void Render::loadShader(char* shader)
 {
 	this -> programID = LoadShaders
 	( 
-		"StandardShading.vertexshader", "StandardShading.fragmentshader" 
+		"../shaders/NormalMapping.vertexshader", shader 
 	);
 
 	this -> MatrixID = glGetUniformLocation(programID, "MVP");
 	this -> ViewMatrixID = glGetUniformLocation(programID, "V");
 	this -> ModelMatrixID = glGetUniformLocation(programID, "M");
+	this -> ModelView3x3MatrixID = glGetUniformLocation(programID, "MV3x3");
 }
 
 void Render::loadTexture(char* txt)
 {
-	Texture = loadDDS((char*) txt);
-	TextureID  = glGetUniformLocation(programID, "myTextureSampler");
+	DiffuseTexture = loadDDS(txt);
+}
+
+void Render::loadNormalTexture(char* txt)
+{
+	NormalTexture = loadBMP_custom(txt);
+}
+
+void Render::loadSpecularTexture(char* txt)
+{
+	SpecularTexture = loadDDS(txt);
+}
+
+void Render::loadTextureIDS()
+{
+	DiffuseTextureID  = glGetUniformLocation(programID, "DiffuseTextureSampler");
+	NormalTextureID  = glGetUniformLocation(programID, "NormalTextureSampler");
+	SpecularTextureID  = glGetUniformLocation(programID, "SpecularTextureSampler");
 }
 
 void Render::loadObject(char* obj)
@@ -157,17 +161,39 @@ void Render::loadObject(char* obj)
 
 void Render::loadVBO()
 {
+	computeTangentBasis(
+        vertices, uvs, normals,
+        tangents, bitangents    
+    );
+	indexVBO_TBN(
+        vertices, uvs, normals, tangents, bitangents,
+        indices, indexed_vertices, indexed_uvs, indexed_normals, indexed_tangents, indexed_bitangents
+    );
+
 	glGenBuffers(1, &vertexbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vec3), &vertices[0], GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+    glBufferData(GL_ARRAY_BUFFER, indexed_vertices.size() * sizeof(glm::vec3), &indexed_vertices[0], GL_STATIC_DRAW);
 
 	glGenBuffers(1, &uvbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
-	glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(vec2), &uvs[0], GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
+    glBufferData(GL_ARRAY_BUFFER, indexed_uvs.size() * sizeof(glm::vec2), &indexed_uvs[0], GL_STATIC_DRAW);
 
 	glGenBuffers(1, &normalbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer);
-	glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(vec3), &normals[0], GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, normalbuffer);
+    glBufferData(GL_ARRAY_BUFFER, indexed_normals.size() * sizeof(glm::vec3), &indexed_normals[0], GL_STATIC_DRAW);
+
+	glGenBuffers(1, &tangentbuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, tangentbuffer);
+    glBufferData(GL_ARRAY_BUFFER, indexed_tangents.size() * sizeof(glm::vec3), &indexed_tangents[0], GL_STATIC_DRAW);
+
+	glGenBuffers(1, &bitangentbuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, bitangentbuffer);
+    glBufferData(GL_ARRAY_BUFFER, indexed_bitangents.size() * sizeof(glm::vec3), &indexed_bitangents[0], GL_STATIC_DRAW);
+
+	glGenBuffers(1, &elementbuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
+
 }
 
 void Render::setLight()
@@ -178,57 +204,106 @@ void Render::setLight()
 
 void Render::drawModel()
 {
-	glUseProgram(programID);
-	computeMatricesFromInputs();
-	glm::mat4 ProjectionMatrix = getProjectionMatrix();
-	glm::mat4 ViewMatrix = getViewMatrix();
-	glm::mat4 ModelMatrix = glm::mat4(1.0);
-	glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
-	glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
-	glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
-	glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &ViewMatrix[0][0]);
-	glm::vec3 lightPos = glm::vec3(4,4,4);
-	glUniform3f(LightID, lightPos.x, lightPos.y, lightPos.z);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, Texture);
-	glUniform1i(TextureID, 0);
-	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-	glVertexAttribPointer(
-		0,                  
-		3,                  
-		GL_FLOAT,           
-		GL_FALSE,           
-		0,                  
-		(void*)0            
-	);
+	 glUseProgram(programID);
 
-	glEnableVertexAttribArray(1);
-	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
-	glVertexAttribPointer(
-		1,                      
-		2,                 
-		GL_FLOAT,  
-		GL_FALSE,                 
-		0,                   
-		(void*)0                          
-	);
+    computeMatricesFromInputs();
+    glm::mat4 ProjectionMatrix = getProjectionMatrix();
+    glm::mat4 ViewMatrix = getViewMatrix();
+    glm::mat4 ModelMatrix = glm::mat4(1.0);
+    glm::mat4 ModelViewMatrix = ViewMatrix * ModelMatrix;
+    glm::mat3 ModelView3x3Matrix = glm::mat3(ModelViewMatrix);
+    glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
 
-	glEnableVertexAttribArray(2);
-	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer);
-	glVertexAttribPointer(
-		2,                      
-		3,                 
-		GL_FLOAT,          
-		GL_FALSE,                 
-		0,                   
-		(void*)0                          
-	);
+    glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
+    glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+    glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &ViewMatrix[0][0]);
+    glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &ViewMatrix[0][0]);
+    glUniformMatrix3fv(ModelView3x3MatrixID, 1, GL_FALSE, &ModelView3x3Matrix[0][0]);
+    
+    glm::vec3 lightPos = glm::vec3(0,0,4);
+    glUniform3f(LightID, lightPos.x, lightPos.y, lightPos.z);
 
-	glDrawArrays(GL_TRIANGLES, 0, vertices.size() );
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
-	glDisableVertexAttribArray(2);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, DiffuseTexture);
+    glUniform1i(DiffuseTextureID, 0);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, NormalTexture);
+    glUniform1i(NormalTextureID, 1);
+
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, SpecularTexture);
+    glUniform1i(SpecularTextureID, 2);
+
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+    glVertexAttribPointer(
+        0,               
+        3,           
+        GL_FLOAT,         
+        GL_FALSE,      
+        0,               
+        (void*)0          
+    );
+
+    glEnableVertexAttribArray(1);
+    glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
+    glVertexAttribPointer(
+        1,                             
+        2,                       
+        GL_FLOAT,                     
+        GL_FALSE,                     
+        0,                             
+        (void*)0                        
+    );
+
+    glEnableVertexAttribArray(2);
+    glBindBuffer(GL_ARRAY_BUFFER, normalbuffer);
+    glVertexAttribPointer(
+        2,                      
+        3,                 
+        GL_FLOAT,          
+        GL_FALSE,                 
+        0,                   
+        (void*)0                          
+    );
+
+    glEnableVertexAttribArray(3);
+    glBindBuffer(GL_ARRAY_BUFFER, tangentbuffer);
+    glVertexAttribPointer(
+        3,                      
+        3,                 
+        GL_FLOAT,          
+        GL_FALSE,            
+        0,                   
+        (void*)0                          
+    );
+
+    glEnableVertexAttribArray(4);
+    glBindBuffer(GL_ARRAY_BUFFER, bitangentbuffer);
+    glVertexAttribPointer(
+        4,                      
+        3,                 
+        GL_FLOAT,          
+        GL_FALSE,                 
+        0,                   
+        (void*)0                          
+    );
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
+
+    glDrawElements(
+        GL_TRIANGLES,     
+        indices.size(),    
+        GL_UNSIGNED_SHORT,
+        (void*)0           
+    );
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+    glDisableVertexAttribArray(2);
+    glDisableVertexAttribArray(3);
+    glDisableVertexAttribArray(4);
+
 }
 
 GLFWwindow* Render::getWindow()
@@ -271,18 +346,11 @@ void Render::computeMatricesFromInputs(){
 		{
 			position += direction * deltaTime * speed;
 		}
-		cout<<position.x<<endl;
-		cout<<position.y<<endl;
-		cout<<position.z<<endl;
 	}
+	
 
 	if (glfwGetKey( window, GLFW_KEY_DOWN ) == GLFW_PRESS){
 		position -= direction * deltaTime * speed;
-		
-		
-		// cout<<position.x<<endl;
-		// cout<<position.y<<endl;
-		// cout<<position.z<<endl;
 	}
 	
 	if (glfwGetKey( window, GLFW_KEY_RIGHT ) == GLFW_PRESS)
@@ -314,6 +382,26 @@ void Render::computeMatricesFromInputs(){
 		position.y -= deltaTime * speed;
 	}
 
+	if(glfwGetKey( window, GLFW_KEY_1) == GLFW_PRESS)
+	{
+		this -> loadShader("../shaders/NormalMapping.fragmentshader");
+	}
+
+	if(glfwGetKey( window, GLFW_KEY_2) == GLFW_PRESS)
+	{
+		this -> loadShader("../shaders/Comic.fragmentshader");
+	}
+
+	if(glfwGetKey( window, GLFW_KEY_3) == GLFW_PRESS)
+	{
+		this -> loadShader("../shaders/Negative.fragmentshader");
+	}
+
+	if(glfwGetKey( window, GLFW_KEY_4) == GLFW_PRESS)
+	{
+		this -> loadShader("../shaders/Static.fragmentshader");
+	}
+
 	float FoV = initialFoV;
 	ProjectionMatrix = glm::perspective(glm::radians(FoV), 4.0f / 3.0f, 0.1f, 100.0f);
 	ViewMatrix       = glm::lookAt(
@@ -333,16 +421,17 @@ glm::mat4 Render::getProjectionMatrix(){
 
 void Render::destroy()
 {
-	// for(auto a : vertices)
-	// {
-	// 	cout<<a.x<<endl;
-	// 	cout<<a.y<<endl;
-	// 	cout<<a.z<<endl;
-	// }
 	glDeleteBuffers(1, &vertexbuffer);
-	glDeleteBuffers(1, &uvbuffer);
-	glDeleteBuffers(1, &normalbuffer);
-	glDeleteProgram(programID);
-	glDeleteTextures(1, &Texture);
-	glDeleteVertexArrays(1, &VertexArrayID);
+    glDeleteBuffers(1, &uvbuffer);
+    glDeleteBuffers(1, &normalbuffer);
+    glDeleteBuffers(1, &tangentbuffer);
+    glDeleteBuffers(1, &bitangentbuffer);
+    glDeleteBuffers(1, &elementbuffer);
+    glDeleteProgram(programID);
+    glDeleteTextures(1, &DiffuseTexture);
+    glDeleteTextures(1, &NormalTexture);
+    glDeleteTextures(1, &SpecularTexture);
+    glDeleteVertexArrays(1, &VertexArrayID);
+
+	glfwTerminate();
 }

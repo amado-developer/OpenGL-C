@@ -12,15 +12,27 @@ class Render{
         GLuint MatrixID;
         GLuint ViewMatrixID;
         GLuint ModelMatrixID;
+        GLuint ModelView3x3MatrixID;
+        GLuint DiffuseTextureID;
+        GLuint NormalTextureID;
+        GLuint SpecularTextureID;
         GLuint Texture;
+        GLuint DiffuseTexture;
+        GLuint NormalTexture;
+        GLuint SpecularTexture;
         GLuint TextureID;
         std::vector<glm::vec3> vertices;
 	    std::vector<glm::vec2> uvs;
 	    std::vector<glm::vec3> normals;
+        std::vector<glm::vec3> tangents;
+        std::vector<glm::vec3> bitangents;
         bool res;
         GLuint vertexbuffer;
         GLuint uvbuffer;
         GLuint normalbuffer;
+        GLuint tangentbuffer;
+        GLuint bitangentbuffer;
+        GLuint elementbuffer;
         GLuint LightID;
         glm::mat4 ViewMatrix;
         glm::mat4 ProjectionMatrix;
@@ -30,6 +42,12 @@ class Render{
         float initialFoV = 45.0f;
         float speed = 3.0f; 
         float mouseSpeed = 0.005f;
+        std::vector<unsigned short> indices;
+        std::vector<glm::vec3> indexed_vertices;
+        std::vector<glm::vec2> indexed_uvs;
+        std::vector<glm::vec3> indexed_normals;
+        std::vector<glm::vec3> indexed_tangents;
+        std::vector<glm::vec3> indexed_bitangents;
 
     public:
         GLFWwindow* getWindow();
@@ -38,10 +56,13 @@ class Render{
         void clear();
         void render();
         void drawTriangle();
-        void loadShader();
+        void loadShader(char* shader);
         void loadTexture(char* txt);
         void loadObject(char* obj);
+        void loadNormalTexture(char* txt);
+        void loadSpecularTexture(char* txt);
         void loadVBO();
+        void loadTextureIDS();
         void setLight();
         void drawModel();
         void computeMatricesFromInputs();

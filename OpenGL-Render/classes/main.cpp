@@ -1,29 +1,26 @@
-// Include standard headers
 #include <stdio.h>
 #include <stdlib.h>
-
-// Include GLEW
 #include <GL/glew.h>
-
-// Include GLFW
 #include <GLFW/glfw3.h>
-
-
-// Include GLM
 #include "glm/glm.hpp"
 
 #include "Render.h"
 using namespace glm;
-
+/**
+ * Universidad del Valle de Guatemala
+ * Amado Garcia
+ * This Project has many parts of code taken from http://www.opengl-tutorial.org/, adapted and in many ways modified.
+ **/
 int main()
 {
-    //Some of the code (right now) is taken from http://www.opengl-tutorial.org/
-    //and it is still being modified (adapted).
     Render render;
     render.createWindow(1024, 768, (char*)"OpenGL");
-    render.loadShader();
-    render.loadTexture("spiderman.dds");
-    render.loadObject("spiderman.obj");
+    render.loadShader("../shaders/NormalMapping.fragmentshader");
+    render.loadTexture("../textures/spiderman.dds");
+    render.loadNormalTexture("../textures/normal_spiderman.bmp");
+    render.loadSpecularTexture("../textures/specular_spiderman.dds");
+    render.loadTextureIDS();
+    render.loadObject("../obj/spiderman.obj");
     render.loadVBO();
     render.setLight();
     while( glfwGetKey(render.getWindow(), GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
@@ -33,7 +30,6 @@ int main()
         render.drawModel();
         render.render();
     }
-    glfwTerminate();
     render.destroy();
 
 	return 0;
