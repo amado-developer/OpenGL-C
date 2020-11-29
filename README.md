@@ -5,7 +5,7 @@ UVG, Graphics course, OpenGl-C++.
 <img src="Images/helloWorld.png" width="700px"/>
 <h1> Project (Render)</h1>
 <p> All the instructions about how to run and use this program are specified in a "Instructions.txt" file </p>
-<p> Here a link to check functinality https://youtu.be/5KrLI7qjt3g</p>
+<p> Here a link to check functionality https://youtu.be/5KrLI7qjt3g</p>
 <h2> Spiderman - flat </h2>
 <img src="Images/first.png" width = "700px"/>
 
